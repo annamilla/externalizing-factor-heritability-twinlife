@@ -30,7 +30,6 @@ df_twinlife <- load(file.path(path, "01_twinLife_externalizing_data.rda"))
 # 2. MISSING DATA
 # ============================================================
 
-
 # Get all unique values across df_ext to check missing codes with TwinLife data documentation
 ext_values <- df_ext %>%
   select(-pid) %>%                      # exclude pid column
@@ -184,6 +183,7 @@ df_ext %>%
   filter(!is.na(alc_n_beer_exc) & !is.na(alc_n_beer_exc2)) %>%
   select(pid, alc_n_beer_exc, alc_n_beer_exc2) # no, exclusive
 
+
 # 10. Merge alc_n_beer_exc  variables
 df_ext <- df_ext %>%
   mutate(alc_n_beer_exc = ifelse(!is.na(alc_n_beer_exc), alc_n_beer_exc, alc_n_beer_exc2)) %>%
@@ -250,7 +250,7 @@ max(df_birth_year$birth_year)
 
 # Drop variables from df_ext that are not needed anymore
 df_ext <- df_ext %>%
-  select(-yea_fq, -mon_fq, -age_yrs_fq, -age_mon_fq, -age_twins_yrs_fq, -mon_pq, -yea_pq, -birth_month, -birth_year, -cgr, -wid)
+  select(-yea_fq, -mon_fq, -age_yrs_fq, -age_mon_fq, -age_twins_yrs_fq, -birth_month, -birth_year, -cgr, -wid)
 
 # Sanity check all rows on one example pid
 df_check <- df_ext %>% filter(pid == 110445002)
@@ -279,11 +279,10 @@ df_ext_counts_grouped <- df_ext_counts %>%
 
 View(df_ext_counts_grouped)
 
-
 # Check coverage of all variables across age groups, 
 # to select variables and/or age groups for analyses
 # Define demographic variables other than age in years to deselect in age coverage check
-demo_vars <- c("pid", "fid", "sex", "zygosity", "age_mon_pq")
+demo_vars <- c("pid", "fid", "sex", "zygosity", "age_mon_pq", "yea_pq", "mon_pq")
 
 # Calculate completeness (0 to 1) for every variable by age group
 age_map <- df_ext %>%
@@ -339,6 +338,7 @@ ggplot(plot_data, aes(x = factor(age_yrs_pq), y = variable, fill = completeness)
     legend.key.height = unit(2, "cm") # makes legend long 
   )
 
+# Save plot
 ggsave(
   filename = file.path(path, "figures/Age_Heatmap.png"),
   plot = last_plot(),
@@ -350,7 +350,6 @@ ggsave(
 # Note: Ages 4-9: devi_anger (dev0100), devi_arg (dev0102), devi_par (dev0101) are self-reported (checked and confirmed in data documentation)
 # No overlap in variables between ages 4-9 and 10+
 # Small sample sizes and sparse data coverage for ages 4-10 and 27–33 
-
 
 # Exclude ages 4–10 for the factor analysis, measurement discontinuity and sparse coverage 
 df_ext <- df_ext %>%
@@ -603,7 +602,6 @@ df_descriptives <- df_ext %>%
   )
 
 View(df_descriptives)
-
 
 
 # ============================================================
