@@ -1,6 +1,6 @@
 ########################################################################
 #### Externalizing — EXT variation across age and gender            #### 
-#### 14.04.2026 - 12.06.2026                                        ####
+#### 14.04.2026 - 14.06.2026                                        ####
 #### main Author: Anna Miller                                       #### 
 ########################################################################
 
@@ -18,6 +18,7 @@ path <- ("/Volumes/1000-twinlife/private/data/2026_TwinLife_Externalizing/202603
 load(file.path(path, "04_twinlife_externalizing_cfa.rda"))
 
 head(df_fs)
+
 
 # ============================================================
 # 2. ADD AGE GROUPS
@@ -41,6 +42,7 @@ df_reg <- df_fs %>%
       levels = c("11-13", "14-16", "17-19", "20-22", "23-26"))
     ))
 
+
 # ============================================================
 # 3. REGRESSION PREPARATION GENDER AND AGE CODING
 # ============================================================
@@ -55,6 +57,7 @@ df_reg <- df_reg %>%
 
 head(df_reg)
 
+
 # ============================================================
 # 4. REGRESS PC1 ON AGE, GENDER, INTERACTION
 # ============================================================
@@ -65,10 +68,34 @@ lm_pc1 <- lm(
   data = df_reg
 )
 
-coeftest(
+# Coefficient table clustered by twin pairs (fid)
+pc1_results <- lmtest::coeftest(
   lm_pc1,
-  vcov = vcovCL(lm_pc1, cluster = df_reg$fid) # cluster by family
-)   
+  vcov = sandwich::vcovCL(
+    lm_pc1,
+    cluster = df_reg$fid
+  )
+)
+
+# Convert to df and apply FDR correction
+pc1_table <- data.frame(
+  term = rownames(pc1_results),
+  estimate = pc1_results[, 1],
+  se = pc1_results[, 2],
+  t_value = pc1_results[, 3],
+  p_value = pc1_results[, 4],
+  row.names = NULL
+) %>%
+  # add column for FDR corrected p value
+  mutate(
+    p_fdr = if_else(
+      term == "(Intercept)",
+      p_value,
+      p.adjust(p_value, method = "fdr")
+    )
+  )
+
+pc1_table   
 
 
 # 2. Test for non-linear age effects
@@ -82,16 +109,38 @@ df_reg <- df_reg %>%
     )
   )
 
-# Non-linear / categorical age model
+# Non-linear categorical age model
 lm_pc1_age_cat <- lm(
   PC1 ~ age_group_f * gender,
   data = df_reg
 )
 
-lmtest::coeftest(
+# Coefficients table
+pc1_age_cat_results <- lmtest::coeftest(
   lm_pc1_age_cat,
   vcov = sandwich::vcovCL(lm_pc1_age_cat, cluster = df_reg$fid)
 )
+
+# Convert to df and FDR correct
+pc1_age_cat_table <- data.frame(
+  term = rownames(pc1_age_cat_results),
+  estimate = pc1_age_cat_results[, 1],
+  se = pc1_age_cat_results[, 2],
+  t_value = pc1_age_cat_results[, 3],
+  p_value = pc1_age_cat_results[, 4],
+  row.names = NULL
+) %>%
+  # add column for FDR corrected p value
+  mutate(
+    p_fdr = if_else(
+      term == "(Intercept)",
+      p_value,
+      p.adjust(p_value, method = "fdr")
+    )
+  )
+
+pc1_age_cat_table
+
 
 # ============================================================
 # 5. REGRESS FIRST ORDER FACTORS ON AGE, GENDER, INTERACTION
@@ -106,7 +155,7 @@ lm_results <- lapply(fo_fs, function(outcome) {
     as.formula(paste0(outcome, " ~ age_group_centered * gender")),
     data = df_reg
   )
-  
+  # coefficients 
   lmtest::coeftest(
     model,
     vcov = sandwich::vcovCL(model, cluster = df_reg$fid)
@@ -137,8 +186,19 @@ lm_table <- do.call(
 
 lm_table
 
+# FDR correction based on p < .05 
+lm_table_fdr <- lm_table %>%
+  filter(term != "(Intercept)") %>%
+  group_by(term) %>%
+  # add column for fdr corrected p value
+  mutate(
+    p_fdr = p.adjust(p_value, method = "fdr")
+  ) %>%
+  ungroup()
+
+
 # Table with significant effects only
-fo_results_sig <- lm_table %>%
+fo_results_sig <- lm_table_fdr %>%
   filter(p_value < .05)
 
 fo_results_sig
