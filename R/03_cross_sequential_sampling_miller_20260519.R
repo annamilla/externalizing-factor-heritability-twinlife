@@ -65,6 +65,26 @@ df_ext_filtered %>%
   count(variable, sort = TRUE)
   # Conflicting data only for srg and age_mon_pq
 
+# Identify participants with more than one and conflicting srg row in same year
+conflicting_srg <- df_ext_filtered %>%
+  group_by(pid, yea_pq) %>%
+  summarise(
+    across(
+      all_of(srg_vars),
+      ~ n_distinct(.x, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = all_of(srg_vars),
+    names_to = "variable",
+    values_to = "n_distinct_values"
+  ) %>%
+  filter(n_distinct_values > 1)
+
+# Number of pids with conflicting srg rows
+n_distinct(conflicting_srg$pid)
+
 # Merge rows per pid per age and take mean of different srg values at same age
 df_ext_merged <- df_ext_filtered %>%
   group_by(pid, age_yrs_pq) %>%
