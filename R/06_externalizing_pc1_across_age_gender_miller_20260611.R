@@ -186,7 +186,7 @@ lm_table <- do.call(
 
 lm_table
 
-# FDR correction based on p < .05 
+# FDR correction  
 lm_table_fdr <- lm_table %>%
   filter(term != "(Intercept)") %>%
   group_by(term) %>%
