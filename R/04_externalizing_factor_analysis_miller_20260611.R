@@ -21,7 +21,7 @@ library(semPlot)
 path <- ("/Volumes/1000-twinlife/private/data/2026_TwinLife_Externalizing/20260320_TwinLife_Externalizing_Data_Transfer_V2/Processed_Data")
 
 # Define path for factor models
-path_model <- ("/Volumes/MPRG-Biosocial/Projects/04_data_analysis/012_SHIP_BASE_TwinLife_SOEP/Externalizing_Genomics/models")
+path_model <- ("/Volumes/MPRG-Biosocial-1/Projects/04_data_analysis/012_SHIP_BASE_TwinLife_SOEP/Externalizing_Genomics/models")
 
 # Load preprocessed data
 load(file.path(path, "03_twinlife_externalizing_cross_sampled.rda"))
@@ -183,6 +183,12 @@ summary(fit_ext5, fit.measures = TRUE, standardized = TRUE)
   # substance use is significantly associated with EXT, but moderately
   # so it's related but not strong enough to be a core component of EXT
 
+# 5.3. Sensitivity model non-hierarchical: one EXT factor for all indicators
+source(file.path(path_model, "model6.R"))
+
+fit_ext6 <- fit_ext(model6)
+summary(fit_ext6, fit.measures = TRUE, standardized = TRUE)
+
 
 # Sanity check rows/pids without variables used in final model
 final_model_vars <- c(
@@ -200,7 +206,7 @@ df_nonrelevant <- df_model[nonrelevant_vars_rows, ]
   # fine just rows with few variables such as risk_tol not used in factor analysis
 
 # Create table fit indices from final model to report
-fit_stats <- fitMeasures(fit_ext_final, c("cfi", "tli", "cfi.robust", "tli.robust", "rmsea.robust", "srmr"))
+fit_stats <- fitMeasures(fit_ext_final, c("cfi", "tli", "cfi.robust", "tli.robust", "rmsea", "rmsea.robust", "srmr"))
 
 fit_table <- data.frame(
   Index = names(fit_stats),
@@ -279,12 +285,12 @@ cor_EXT <- cor(df_fs[, c("EXT", "hyp", "att", "srg", "con")],
 
 cor_EXT
 
-# Create heatmap EXT correlations 
+# Create heatmap EXT correlations using corrplot package
 png(paste0(path, "/figures/", "EXT_Correlation_Heatmap.png"), width = 2000, height = 2000, res = 300) # prepare to save
 
 corrplot(cor_EXT, method = "color", type = "upper", addCoef.col = "white", # plot corr 
          tl.col = "black", tl.srt = 45,                                  # set colors
-         col = colorRampPalette(c("#FFFFFF", "#8BA2F0", "#5E1AF4"))(200),
+         col = colorRampPalette(c("#8C8418", "#FFFFFF", "#5E1AF4"))(200),
          diag = FALSE, main = "Correlations Between EXT and Indicators") # title
 dev.off()
 
