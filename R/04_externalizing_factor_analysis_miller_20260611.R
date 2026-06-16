@@ -21,7 +21,7 @@ library(semPlot)
 path <- ("/Volumes/1000-twinlife/private/data/2026_TwinLife_Externalizing/20260320_TwinLife_Externalizing_Data_Transfer_V2/Processed_Data")
 
 # Define path for factor models
-path_model <- ("/Volumes/MPRG-Biosocial-1/Projects/04_data_analysis/012_SHIP_BASE_TwinLife_SOEP/Externalizing_Genomics/models")
+path_model <- ("/Volumes/MPRG-Biosocial/Projects/04_data_analysis/012_SHIP_BASE_TwinLife_SOEP/Externalizing_Genomics/models")
 
 # Load preprocessed data
 load(file.path(path, "03_twinlife_externalizing_cross_sampled.rda"))
@@ -418,7 +418,8 @@ pca_diag <- prcomp(na.omit(vars_pca), scale. = TRUE)
 
 # Calculate variance explained by first PC
 var_explained <- (pca_diag$sdev^2 / sum(pca_diag$sdev^2))[1] * 100
-cat("First PC", round(var_explained, 2), "% of the variance.")
+var_explained
+
 
 # Make scree Plot 
 plot(pca_diag$sdev^2, type = "b", pch = 19, col = "#5E1AF4",
@@ -434,18 +435,16 @@ abline(h = 1, lty = 2, col = "#FF6230") # line at 1 kaiser criterion
 dev.off()
 
 
-# Variance explained by PCs
+# Variance explained by other PCs in percent
 eig <- pca_diag$sdev^2 # eigenvalue
-prop_var <- eig / sum(eig) # variance proportional
+vars_explained <- eig / sum(eig) # variance proportional
 
-pc1_var <- prop_var[1] * 100 # in percent
-pc2_var <- prop_var[2] * 100
-pc3_var <- prop_var[3] * 100
-pc4_var <- prop_var[4] * 100
-pc234_var <- sum(prop_var[-1]) * 100 # sum of variance explained by all except first PC
+pc2_var <- vars_explained[2] * 100
+pc3_var <- vars_explained[3] * 100
+pc4_var <- vars_explained[4] * 100
+pc234_var <- sum(vars_explained[-1]) * 100 # sum of variance explained by all except first PC
 
 # Print for reporting
-cat("PC1 explains:", round(pc1_var, 2), "%\n")
 cat("PC2 explains:", round(pc2_var, 2), "%\n")
 cat("PC3 explains:", round(pc3_var, 2), "%\n")
 cat("PC4 explains:", round(pc4_var, 2), "%\n")
@@ -468,7 +467,7 @@ pca_diag <- prcomp(
   scale. = TRUE
 )
 
-# create empty PC1 column first
+# create empty PC1 numeric column first
 df_fs$PC1 <- NA_real_
 
 # Insert PC1 back into matching rows
@@ -482,25 +481,44 @@ cor(df_fs$EXT, df_fs$PC1, use = "pairwise.complete.obs") # highly correlated
 # Reverse PC1 so higher PC1 indicates higher externalizing
 df_fs$PC1 <- -df_fs$PC1
 
-# Check again
+# Check reverse coding
 cor(df_fs$EXT, df_fs$PC1, use = "pairwise.complete.obs") # now higher PC1 = higher externalizing
 
+# Standardize PC1 for downstream analyses
+df_fs$PC1 <- as.numeric(scale(df_fs$PC1))
+
+# Check standardization
+mean(df_fs$PC1, na.rm = TRUE)  # close to 0, good
+sd(df_fs$PC1, na.rm = TRUE)    # 1, perfect
+
+# PC1 summary statistics
+summary(df_fs$PC1)
+
+# Standardize EXT and first order factor scores
+df_fs <- df_fs %>%
+  mutate(
+    across(
+      all_of(c(first_order_factors, "EXT")),
+      ~ as.numeric(scale(.x))
+    )
+  )
+
 
 # ============================================================
-# 7. EXPORT DATA
+# 7. SAVE DATA
 # ============================================================
 
-# Remove not used variables to export final model data
+# Remove not used variables to save final model data
 df_model <- df_model %>%
   select(
     all_of(demo_vars),
     all_of(indicators)
   )
 
-# Export model data
+# Save model data
 write.csv(df_model, file.path(path, "04_twinlife_externalizing_model_data.csv"), row.names = FALSE)
 save(df_model, file = file.path(path, "04_twinlife_externalizing_model_data.rda"))
 
-# Export factor scores and PC1 including sex, zygosity, age in years 
+# Save factor scores and PC1 including sex, zygosity, age in years 
 write.csv(df_fs, file.path(path, "04_twinlife_externalizing_cfa.csv"), row.names = FALSE)
 save(df_fs, file = file.path(path, "04_twinlife_externalizing_cfa.rda"))

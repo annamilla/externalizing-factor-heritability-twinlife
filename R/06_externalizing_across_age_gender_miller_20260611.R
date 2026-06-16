@@ -211,3 +211,4 @@ fo_results_sig
 # Export data including age group column overwriting previously created file
 write.csv(df_fs, file.path(path, "04_twinlife_externalizing_cfa.csv"), row.names = FALSE)
 save(df_fs, file = file.path(path, "04_twinlife_externalizing_cfa.rda"))
+
