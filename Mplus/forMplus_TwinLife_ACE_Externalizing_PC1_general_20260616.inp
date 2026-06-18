@@ -1,0 +1,97 @@
+TITLE: General ACE model for TwinLife Externalizing PC1 with gender and age as covariates;
+DATA: FILE = "05_twinlife_externalizing_formplus.dat";
+VARIABLE: 
+NAMES = 
+    fid
+    pid_t1 pid_t2
+    sex_t1 sex_t2
+    zygosity
+    age_yrs
+    age_group
+    PC1_t1 PC1_t2
+    EXT1_t1 EXT1_t2
+    hyp_t1 hyp_t2
+    att_t1 att_t2
+    srg_t1 srg_t2
+    con_t1 con_t2
+    zyg_gender
+    zyg_age
+    age_gender_zyg;
+      
+MISSING = .;
+
+USEVARIABLES ARE
+      zygosity ! for grouping
+      sex_t1 ! sex_t1 as covariate (no opposite sex twins)
+      PC1_t1 PC1_t2 ! Externalizing PC1 for twin 1 and 2
+      age2 age3; ! age group covariates coded below
+        
+GROUPING IS zygosity ! zygosity for MZ/DZ grouping
+      (1 = MZ
+       2 = DZ);
+
+DEFINE:
+  ! Create categorical variable per age group using group 1 as reference
+  ! this doesn't assume linear trend
+  ! more appropriate for age groups as developmental stages
+  age2 = (age_group EQ 2);
+  age3 = (age_group EQ 3);
+
+ANALYSIS:
+MODEL = NOCOVARIANCES;
+
+MODEL:
+  ! Twin 1
+  A1 BY PC1_t1* (a); ! additive genetic component
+  C1 BY PC1_t1* (c); ! shared environment
+  E1 BY PC1_t1* (e); ! nonshared environment
+
+  ! Twin 2, factors constrained equal to twin 1
+  A2 BY PC1_t2* (a);
+  C2 BY PC1_t2* (c);
+  E2 BY PC1_t2* (e);
+
+  ! Fix latent A, D, and E variances to 1 
+  ! then squared path coefficients represent variance components
+  A1@1; C1@1; E1@1;
+  A2@1; C2@1; E2@1;
+
+  ! Fix residual variances of PC1 to zero to decompose all variance into A, D, E
+  PC1_t1@0;
+  PC1_t2@0;
+
+  [A1@0 A2@0 C1@0 C2@0 E1@0 E2@0]; ! fix latent factor means to zero
+
+  ! Constrain PC1 intercept to be equal across twins and zygosity
+  ! expected PC1 when covariates are zero
+  [PC1_t1*] (mean);
+  [PC1_t2*] (mean);
+
+  ! Include sex as covariate, use same for both twins, since
+  ! no opposite-sex twins in dataset and sex_t1 and t2 are identical
+  PC1_t1 ON sex_t1 (bsex);
+  PC1_t2 ON sex_t1 (bsex);
+
+  ! Categorical age group as covariate
+  PC1_t1 ON age2 age3;
+  PC1_t2 ON age2 age3;
+
+MODEL MZ:
+  A1 WITH A2@1; ! MZ twins share 100% of additive genetic effects
+  C1 WITH C2@1; ! same for domimance
+
+MODEL DZ:
+  A1 WITH A2@0.5; ! DZ twins correlate .5 for additive
+  C1 WITH C2@1; ! correlate .25 for dominance
+
+MODEL CONSTRAINT:
+  ! Define variance components
+  NEW(h2 c2 e2);
+
+  h2 = a*a / (a*a + c*c + e*e); ! h2 = variance due to additive genetic effects
+  c2 = c*c / (a*a + c*c + e*e); ! same for shared environment
+  e2 = e*e / (a*a + c*c + e*e); ! same for nonshared environment
+
+OUTPUT:
+  CINTERVAL ! get confidence intervals for parameters
+  TECH1; ! get parameter setup for equality constraints

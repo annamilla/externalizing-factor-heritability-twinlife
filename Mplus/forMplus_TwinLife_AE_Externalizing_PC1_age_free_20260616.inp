@@ -1,0 +1,157 @@
+TITLE: TwinLife Externalizing PC1 age-group-specific AE model with AE free across age group;
+
+DATA:
+  FILE = "05_twinlife_externalizing_formplus.dat";
+
+VARIABLE:
+  NAMES =
+    fid
+    pid_t1 pid_t2
+    sex_t1 sex_t2
+    zygosity
+    age_yrs
+    age_group
+    PC1_t1 PC1_t2
+    EXT1_t1 EXT1_t2
+    hyp_t1 hyp_t2
+    att_t1 att_t2
+    srg_t1 srg_t2
+    con_t1 con_t2
+    zyg_gender
+    zyg_age
+    age_gender_zyg;
+    
+  MISSING = .;
+
+  USEVARIABLES ARE
+    zyg_age ! zygosity-by-age-group group variable
+    sex_t1 ! sex covariate to adjust mean PC1 differences by sex
+    PC1_t1 PC1_t2;
+
+  GROUPING IS zyg_age  ! 6 groups for MZ/DZ separately for each age group
+    (1  = MZ_age1
+     2  = DZ_age1
+     3  = MZ_age2
+     4  = DZ_age2
+     5  = MZ_age3
+     6  = DZ_age3);
+
+ANALYSIS:
+  MODEL = NOCOVARIANCES; ! twin covariance specified manually
+
+MODEL:
+  ! Twin 1
+  A1 BY PC1_t1* (a); ! additive genetic component
+  E1 BY PC1_t1* (e); ! nonshared environment
+
+  ! Twin 2, factors constrained equal to twin 1
+  A2 BY PC1_t2* (a);
+  E2 BY PC1_t2* (e);
+
+  ! Fix latent A, and E variances to 1
+  ! then squared path coefficients represent variance components
+  A1@1; E1@1;
+  A2@1; E2@1;
+
+  ! Fix residual variances of PC1 to zero to decompose all variance into A, E
+  PC1_t1@0;
+  PC1_t2@0;
+
+  [A1@0 A2@0 E1@0 E2@0]; ! fix latent factor means to zero
+
+  ! Adjust mean PC1 differences by gender
+  PC1_t1 ON sex_t1;
+  PC1_t2 ON sex_t1;
+
+MODEL MZ_age1:
+  ! Age group 1 AEE paths
+  A1 BY PC1_t1* (a_age1);
+  E1 BY PC1_t1* (e_age1);
+
+  A2 BY PC1_t2* (a_age1);
+  E2 BY PC1_t2* (e_age1);
+
+  ! MZ twins share 100% additive genetic effects
+  A1 WITH A2@1;
+
+MODEL DZ_age1:
+  ! Same age group 1 AE paths as MZ age group 1
+  A1 BY PC1_t1* (a_age1);
+  E1 BY PC1_t1* (e_age1);
+
+  A2 BY PC1_t2* (a_age1);
+  E2 BY PC1_t2* (e_age1);
+
+  A1 WITH A2@0.5; ! DZ twins correlate .5
+
+MODEL MZ_age2:
+  ! Age group 2 AE paths free from age group 1
+  A1 BY PC1_t1* (a_age2);
+  E1 BY PC1_t1* (e_age2);
+
+  A2 BY PC1_t2* (a_age2);
+  E2 BY PC1_t2* (e_age2);
+
+  ! MZ twins share 100% additive and dominance genetic effects
+  A1 WITH A2@1;
+
+MODEL DZ_age2:
+  ! Same age group 2 AE paths as MZ age group 2
+  A1 BY PC1_t1* (a_age2);
+  E1 BY PC1_t1* (e_age2);
+
+  A2 BY PC1_t2* (a_age2);
+  E2 BY PC1_t2* (e_age2);
+
+  A1 WITH A2@0.5; ! DZ twins correlate .5
+
+MODEL MZ_age3:
+  ! Age group 3 AE paths free from age groups 1 and 2
+  A1 BY PC1_t1* (a_age3);
+  E1 BY PC1_t1* (e_age3);
+
+  A2 BY PC1_t2* (a_age3);
+  E2 BY PC1_t2* (e_age3);
+
+  ! MZ twins share 100% additive and dominance genetic effects
+  A1 WITH A2@1;
+
+MODEL DZ_age3:
+  ! Same age group 3 AE paths as MZ age group 3
+  A1 BY PC1_t1* (a_age3);
+  E1 BY PC1_t1* (e_age3);
+
+  A2 BY PC1_t2* (a_age3);
+  E2 BY PC1_t2* (e_age3);
+
+  A1 WITH A2@0.5; ! DZ twins correlate .5
+
+
+MODEL CONSTRAINT:
+  ! estimate age-group-specific variance components
+  NEW(
+    h2_age1 e2_age1 
+    h2_age2 e2_age2 
+    h2_age3 e2_age3 
+    dh12 dh23
+  );
+
+  ! Age group 1 ADE and total genetic effects
+  h2_age1 = a_age1*a_age1 / (a_age1*a_age1 + e_age1*e_age1);
+  e2_age1 = e_age1*e_age1 / (a_age1*a_age1  + e_age1*e_age1);
+
+  ! Age group 2 ADE and total genetic effects
+  h2_age2 = a_age2*a_age2 / (a_age2*a_age2 + e_age2*e_age2);
+  e2_age2 = e_age2*e_age2 / (a_age2*a_age2 + e_age2*e_age2);
+
+  ! Age group 3 ADE and total genetic effects
+  h2_age3 = a_age3*a_age3 / (a_age3*a_age3 + e_age3*e_age3);
+  e2_age3 = e_age3*e_age3 / (a_age3*a_age3 + e_age3*e_age3);
+
+  dh12 = h2_age1 - h2_age2; ! age group 1 minus age group 2
+  dh23 = h2_age2 - h2_age3; ! 2 minus 3
+
+
+OUTPUT:
+  CINTERVAL
+  TECH1;

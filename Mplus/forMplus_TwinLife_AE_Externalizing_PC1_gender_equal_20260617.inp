@@ -1,0 +1,124 @@
+TITLE: TwinLife Externalizing PC1 gender-specific AE model with AE equal across gender;
+
+DATA:
+  FILE = "05_twinlife_externalizing_formplus.dat";
+
+VARIABLE:
+  NAMES =
+    fid
+    pid_t1 pid_t2
+    sex_t1 sex_t2
+    zygosity
+    age_yrs
+    age_group
+    PC1_t1 PC1_t2
+    EXT1_t1 EXT1_t2
+    hyp_t1 hyp_t2
+    att_t1 att_t2
+    srg_t1 srg_t2
+    con_t1 con_t2
+    zyg_gender
+    zyg_age
+    age_gender_zyg;
+  MISSING = .;
+
+  USEVARIABLES ARE
+    zyg_gender ! zygosity-gender group variable
+    PC1_t1 PC1_t2
+    age2 age3; ! age group covariates to adjust mean PC1 differences by age
+
+  GROUPING IS zyg_gender ! Four groups by zygosity and gender
+    (1 = MZ_male
+     2 = DZ_male
+     3 = MZ_female
+     4 = DZ_female);
+
+DEFINE:
+  ! Categorical age group variable to adjust mean differences
+  age2 = (age_group EQ 2);
+  age3 = (age_group EQ 3);
+
+
+ANALYSIS:
+  MODEL = NOCOVARIANCES; ! twin covariance specified manually
+
+MODEL:
+  ! Twin 1
+  A1 BY PC1_t1* (a); ! additive genetic component
+  E1 BY PC1_t1* (e); ! nonshared environment
+
+  ! Twin 2, factors constrained equal to twin 1
+  A2 BY PC1_t2* (a);
+  E2 BY PC1_t2* (e);
+
+  ! Fix latent A and E variances to 1 
+  ! then squared path coefficients represent variance components
+  A1@1; E1@1;
+  A2@1; E2@1;
+
+  ! Fix residual variances of PC1 to zero to decompose all variance into A, D, E
+  PC1_t1@0;
+  PC1_t2@0;
+
+  [A1@0 A2@0 E1@0 E2@0]; ! fix latent factor means to zero
+
+  ! Categorical age group as covariate
+  PC1_t1 ON age2 age3;
+  PC1_t2 ON age2 age3;
+
+MODEL MZ_male:
+  ! Male AE paths with same labels for twin 1 and 2
+  A1 BY PC1_t1* (a_eq);
+  E1 BY PC1_t1* (e_eq);
+
+  A2 BY PC1_t2* (a_eq);
+  E2 BY PC1_t2* (e_eq);
+
+  ! MZ twins share 100% additive genetic effects
+  A1 WITH A2@1;
+
+MODEL DZ_male:
+  ! Same male AE paths as MZ male
+  A1 BY PC1_t1* (a_eq);
+  E1 BY PC1_t1* (e_eq);
+
+  A2 BY PC1_t2* (a_eq);
+  E2 BY PC1_t2* (e_eq);
+
+  A1 WITH A2@0.5; ! DZ twins correlate .5 
+
+MODEL MZ_female:
+  ! Female AE paths constrained equal to male AE paths with shared labels
+  A1 BY PC1_t1* (a_eq);
+  E1 BY PC1_t1* (e_eq);
+
+  A2 BY PC1_t2* (a_eq);
+  E2 BY PC1_t2* (e_eq);
+
+  ! MZ twins correlate 1.0 
+  A1 WITH A2@1;
+
+MODEL DZ_female:
+  ! Same female AE path labels as MZ female and MZ and DZ males
+  ! constrained equal across gender
+  A1 BY PC1_t1* (a_eq);
+  E1 BY PC1_t1* (e_eq);
+
+  A2 BY PC1_t2* (a_eq);
+  E2 BY PC1_t2* (e_eq);
+
+  A1 WITH A2@0.5; ! DZ twins correlate .5 
+
+MODEL CONSTRAINT:
+  ! estimate gender-equal variance components
+  NEW(
+    h2_eq e2_eq
+  );
+
+  ! AE and total genetic effects constrained equal across gender
+  h2_eq = a_eq*a_eq / (a_eq*a_eq + e_eq*e_eq);
+  e2_eq = e_eq*e_eq / (a_eq*a_eq + e_eq*e_eq);
+
+OUTPUT:
+  CINTERVAL
+  TECH1;
