@@ -29,12 +29,10 @@ df_model$age_group <- as.factor(df_model$age_yrs_pq)
 # Test invariance across age groups (can't converge with age continously)
 # Define groups (tried groups of 2 yrs, didn't converge -> 3 yrs worked!)
 df_model$age_group <- cut(df_model$age_yrs_pq, 
-                          breaks = c(10, 13, 16, 19, 22, 26), 
-                          labels = c("11-13",  # 11-13 early adolescence
-                                     "14-16",  # 14-16 middle adolescence
-                                     "17-19",  # 17-19 late adolescence
-                                     "20-22",  # 20-22 early emerging adulthood
-                                     "23-26")) # 23-26 later emerging adulthood
+                       breaks = c(10, 15, 21, 26), 
+                       labels = c("11-15",  # 11-15 early to middle adolescence 
+                                  "16-21",  # 16-21 late adolescence to early emerging adulthood 
+                                  "22-26")) # 22-26 later emerging adulthood
 
 # Load final model
 source(file.path(path_model, "model_final.R"))

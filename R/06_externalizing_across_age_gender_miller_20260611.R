@@ -24,18 +24,18 @@ head(df_fs)
 # 2. ADD AGE GROUPS
 # ============================================================
 
+
 # Define age groups according to invariance testing
 df_fs$age_group <- cut(df_fs$age_yrs, 
-                          breaks = c(10, 13, 16, 19, 22, 26), 
-                          labels = c("11-13",  # 11-13 early adolescence
-                                     "14-16",  # 14-16 middle adolescence
-                                     "17-19",  # 17-19 late adolescence
-                                     "20-22",  # 20-22 early emerging adulthood
-                                     "23-26")) # 23-26 later emerging adulthood
+                       breaks = c(10, 15, 21, 26), 
+                       labels = c("11-15",  # 11-15 early to middle adolescence 
+                                  "16-21",  # 16-21 late adolescence to early emerging adulthood 
+                                  "22-26")) # 22-26 later emerging adulthood
+
 head(df_fs)
 
 # age group as numeric
-df_reg <- df_fs %>%
+df_fs <- df_fs %>%
   mutate(
     age_group = as.numeric(factor(
       age_group,
@@ -48,14 +48,14 @@ df_reg <- df_fs %>%
 # ============================================================
 
 # Create gender effect-coded, age centered and interaction term in df
-df_reg <- df_reg %>%
+df_fs <- df_fs %>%
   mutate(
     gender = ifelse(sex == 2, 0.5, -0.5), # effect code sex female as +0.5, male as -0.5
     age_group_centered = age_group - mean(age_group, na.rm = TRUE),
     age_x_gender = age_group_centered * gender
   )
 
-head(df_reg)
+head(df_fs)
 
 
 # ============================================================
@@ -65,7 +65,7 @@ head(df_reg)
 # 1. Regression model with PC1 as the outcome and age_group_centered, gender, and their interaction as predictors
 lm_pc1 <- lm(
   PC1 ~ age_group_centered * gender,
-  data = df_reg
+  data = df_fs
 )
 
 # Coefficient table clustered by twin pairs (fid)
@@ -73,7 +73,7 @@ pc1_results <- lmtest::coeftest(
   lm_pc1,
   vcov = sandwich::vcovCL(
     lm_pc1,
-    cluster = df_reg$fid
+    cluster = df_fs$fid
   )
 )
 
@@ -86,12 +86,12 @@ pc1_table <- data.frame(
   p_value = pc1_results[, 4],
   row.names = NULL
 ) %>%
-  # add column for FDR corrected p value
   mutate(
-    p_fdr = if_else(
-      term == "(Intercept)",
-      p_value,
-      p.adjust(p_value, method = "fdr")
+    p_fdr = p_value,
+    p_fdr = replace(
+      p_fdr,
+      term != "(Intercept)", # exclude intercept from multiple testing
+      p.adjust(p_value[term != "(Intercept)"], method = "fdr")
     )
   )
 
@@ -100,25 +100,25 @@ pc1_table
 
 # 2. Test for non-linear age effects
 # Make age group categorical
-df_reg <- df_reg %>%
+df_fs <- df_fs %>%
   mutate(
     age_group_f = factor(
       age_group,
-      levels = 1:5,
-      labels = c("11-13", "14-16", "17-19", "20-22", "23-26")
+      levels = 1:3,
+      labels = c("11-15", "16-21", "22-26")
     )
   )
 
 # Non-linear categorical age model
 lm_pc1_age_cat <- lm(
   PC1 ~ age_group_f * gender,
-  data = df_reg
+  data = df_fs
 )
 
 # Coefficients table
 pc1_age_cat_results <- lmtest::coeftest(
   lm_pc1_age_cat,
-  vcov = sandwich::vcovCL(lm_pc1_age_cat, cluster = df_reg$fid)
+  vcov = sandwich::vcovCL(lm_pc1_age_cat, cluster = df_fs$fid)
 )
 
 # Convert to df and FDR correct
@@ -130,16 +130,17 @@ pc1_age_cat_table <- data.frame(
   p_value = pc1_age_cat_results[, 4],
   row.names = NULL
 ) %>%
-  # add column for FDR corrected p value
+  # add column for FDR corrected p value, 
   mutate(
-    p_fdr = if_else(
-      term == "(Intercept)",
-      p_value,
-      p.adjust(p_value, method = "fdr")
+    p_fdr = p_value,
+    p_fdr = replace(
+      p_fdr,
+      term != "(Intercept)", # exclude intercept from multiple testing
+      p.adjust(p_value[term != "(Intercept)"], method = "fdr")
     )
   )
 
-pc1_age_cat_table
+pc1_age_cat_table # roughly linear!
 
 
 # ============================================================
@@ -153,12 +154,12 @@ fo_fs <- c("hyp", "att", "srg", "con")
 lm_results <- lapply(fo_fs, function(outcome) {
   model <- lm(
     as.formula(paste0(outcome, " ~ age_group_centered * gender")),
-    data = df_reg
+    data = df_fs
   )
   # coefficients 
   lmtest::coeftest(
     model,
-    vcov = sandwich::vcovCL(model, cluster = df_reg$fid)
+    vcov = sandwich::vcovCL(model, cluster = df_fs$fid)
   )
 })
 
