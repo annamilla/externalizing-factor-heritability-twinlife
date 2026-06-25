@@ -10,10 +10,10 @@ NAMES =
     age_group
     PC1_t1 PC1_t2
     EXT1_t1 EXT1_t2
-    hyp_t1 hyp_t2
-    att_t1 att_t2
-    srg_t1 srg_t2
-    con_t1 con_t2
+    HYP_t1 HYP_t2
+    ATT_t1 ATT_t2
+    SCT_t1 SCT_t2
+    CON_t1 CON_t2
     zyg_gender
     zyg_age
     age_gender_zyg;
