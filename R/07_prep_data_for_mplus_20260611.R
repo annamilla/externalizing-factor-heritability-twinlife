@@ -31,11 +31,11 @@ df_pc1_wide <- df_fs %>%
   arrange(pid, .by_group = TRUE) %>%
   mutate(twin = paste0("t", row_number())) %>%
   ungroup() %>%
-  select(fid, pid, sex, zygosity, age_yrs, age_group, PC1, EXT, hyp, att, srg, con, twin) %>%
+  select(fid, pid, sex, zygosity, age_yrs, age_group, PC1, EXT, HYP, ATT, SCT, CON, twin) %>%
   pivot_wider(
     id_cols = c(fid, zygosity, age_yrs, age_group),
     names_from = twin,
-    values_from = c(pid, sex, PC1, EXT, hyp, att, srg, con),
+    values_from = c(pid, sex, PC1, EXT, HYP, ATT, SCT, CON),
     names_sep = "_"
   ) %>%
   select(
@@ -47,10 +47,10 @@ df_pc1_wide <- df_fs %>%
     age_group,
     PC1_t1, PC1_t2,
     EXT_t1, EXT_t2,
-    hyp_t1, hyp_t2,
-    att_t1, att_t2,
-    srg_t1, srg_t2,
-    con_t1, con_t2
+    HYP_t1, HYP_t2,
+    ATT_t1, ATT_t2,
+    SCT_t1, SCT_t2,
+    CON_t1, CON_t2
   )
 
 head(df_pc1_wide)
@@ -167,6 +167,7 @@ length(unique(df_pc1_wide_mplus$fid)) #3389
 df_pc1_wide_mplus <- df_pc1_wide_mplus %>%
   filter(!is.na(PC1_t1), !is.na(PC1_t2))
 
+# ICCs PC1
 pc1_twin_corr <- df_pc1_wide_mplus %>%
   group_by(zygosity) %>%
   summarise(
@@ -176,23 +177,62 @@ pc1_twin_corr <- df_pc1_wide_mplus %>%
 
 pc1_twin_corr
 
+# ICCs per age group
+pc1_twin_corr_age <- df_pc1_wide_mplus %>%
+  group_by(zygosity, age_group) %>%
+  summarise(
+    n = sum(complete.cases(PC1_t1, PC1_t2)),
+    twin_correlation = cor(
+      PC1_t1,
+      PC1_t2,
+      use = "complete.obs"
+    ),
+    .groups = "drop"
+  ) %>%
+  arrange(age_group, zygosity)
+
+pc1_twin_corr_age
+
+# ICCs first-order factors
 factor_twin_corr <- df_pc1_wide_mplus %>%
   group_by(zygosity) %>%
   summarise(
-    n_hyp = sum(complete.cases(hyp_t1, hyp_t2)),
-    r_hyp = cor(hyp_t1, hyp_t2, use = "complete.obs"),
+    n_hyp = sum(complete.cases(HYP_t1, HYP_t2)),
+    r_hyp = cor(HYP_t1, HYP_t2, use = "complete.obs"),
     
-    n_att = sum(complete.cases(att_t1, att_t2)),
-    r_att = cor(att_t1, att_t2, use = "complete.obs"),
+    n_att = sum(complete.cases(ATT_t1, ATT_t2)),
+    r_att = cor(ATT_t1, ATT_t2, use = "complete.obs"),
     
-    n_srg = sum(complete.cases(srg_t1, srg_t2)),
-    r_srg = cor(srg_t1, srg_t2, use = "complete.obs"),
+    n_sct = sum(complete.cases(SCT_t1, SCT_t2)),
+    r_sct = cor(SCT_t1, SCT_t2, use = "complete.obs"),
     
-    n_con = sum(complete.cases(con_t1, con_t2)),
-    r_con = cor(con_t1, con_t2, use = "complete.obs")
+    n_con = sum(complete.cases(CON_t1, CON_t2)),
+    r_con = cor(CON_t1, CON_t2, use = "complete.obs")
   )
 
 factor_twin_corr
+
+# ICCs first order per age group
+factor_twin_corr_age <- df_pc1_wide_mplus %>%
+  group_by(age_group, zygosity) %>%
+  summarise(
+    n_hyp = sum(complete.cases(HYP_t1, HYP_t2)),
+    r_hyp = cor(HYP_t1, HYP_t2, use = "complete.obs"),
+    
+    n_att = sum(complete.cases(ATT_t1, ATT_t2)),
+    r_att = cor(ATT_t1, ATT_t2, use = "complete.obs"),
+    
+    n_sct = sum(complete.cases(SCT_t1, SCT_t2)),
+    r_sct = cor(SCT_t1, SCT_t2, use = "complete.obs"),
+    
+    n_con = sum(complete.cases(CON_t1, CON_t2)),
+    r_con = cor(CON_t1, CON_t2, use = "complete.obs"),
+    
+    .groups = "drop"
+  ) %>%
+  arrange(age_group, zygosity)
+
+factor_twin_corr_age
 
 # ============================================================
 # 6. SAMPLE SIZE PER AGE GROUP
