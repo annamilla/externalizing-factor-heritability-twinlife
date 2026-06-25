@@ -23,7 +23,7 @@ path <- ("/Volumes/1000-twinlife/private/data/2026_TwinLife_Externalizing/202603
 df_twinlife <- read_dta(file.path(path, "20260320_TwinLife_Externalizing_Phenotype.dta"))
 
 
-# ============================================================
+p# ============================================================
 # 2. FILTER SELF-REPORTED TWIN DATA
 # ============================================================
 
@@ -297,9 +297,10 @@ ext <- c(
   
   # Deviant behavior
   "dev0100", # Fits of anger
+  "dev0101", # Listening to parents
   "ext0105", # Fits of anger
-  "dev0102", # Listening to parents
-  "dev0103", # Arguing with others, bullying
+  "dev0102", # Arguments with other children
+  "dev0103", # Cheating, lying
   
   # Aggression
   "ext0107", # attack other physically
@@ -425,8 +426,9 @@ df_ext <- df_ext %>%
     # Deviant behavior
     devi_anger = dev0100, 
     devi_anger2 = ext0105, 
-    devi_par = dev0102, 
-    devi_arg = dev0103, 
+    devi_par = dev0101,
+    devi_arg = dev0102,
+    devi_cheat = dev0103, 
     
     # Aggression
     agg = ext0107, # attack other physically
@@ -436,10 +438,10 @@ df_ext <- df_ext %>%
     del_drink_drive24 = del1704, 
     del_steal = ext0109, 
     del_steal_ever = del0500,
-    del_steal24 = del0501, 
-    del_steal_freq = del0502, 
+    del_steal12 = del0501, 
+    del_steal_solo = del0502, 
     del_fair_dg_ever = del0100, 
-    del_fair_dg12 = del0101, 
+    del_fair_dg24 = del0101, 
     del_away_ovnt = del0200, 
     del_away_ovnt12 = del0201, 
     del_away_ovnt_solo = del0202,
