@@ -174,6 +174,8 @@ parameterEstimates(fit_ext_final, standardized = TRUE) |>
   # higher-order EXT structure stable -> EXT factor does not depend on substance use for its definition
   # con factor is still weak on agg and del_steal, but not as problematic as sub, because con loads well on EXT
 
+# Get standardized CI also
+standardizedSolution(fit_ext_final, ci = TRUE)
 
 # 5.2. Sensitivity model to test whether substance use is related to EXT
 source(file.path(path_model, "model5.R"))
@@ -239,7 +241,7 @@ correlations <- numeric(length(ext_vars))
 # vector names to match variable names
 names(correlations) <- ext_vars
 
-# Loop through variables to get correltations with EXT
+# Loop through variables to get correlations with EXT
 for (v in ext_vars) {
   correlations[v] <- cor( 
     df_corr[[v]], 
@@ -280,7 +282,7 @@ head(df_fs)
 sum(!is.na(df_fs$EXT))  # 6851
 
 # Check latent EXT score correlations with first oorder factors
-cor_EXT <- cor(df_fs[, c("EXT", "hyp", "att", "srg", "con")], 
+cor_EXT <- cor(df_fs[, c("EXT", "HYP", "ATT", "SCT", "CON")], 
     use = "pairwise.complete.obs") # use pairwise to ignore NAs
 
 cor_EXT
@@ -292,6 +294,7 @@ corrplot(cor_EXT, method = "color", type = "upper", addCoef.col = "white", # plo
          tl.col = "black", tl.srt = 45,                                  # set colors
          col = colorRampPalette(c("#8C8418", "#FFFFFF", "#5E1AF4"))(200),
          diag = FALSE, main = "Correlations Between EXT and Indicators") # title
+
 dev.off()
 
 # ============================================================
@@ -304,35 +307,8 @@ std_res <- standardizedSolution(fit_ext_final, ci = TRUE) # standardized, with c
 # Get loadings for higher order EXT factor to plot
 plot_data <- std_res[std_res$lhs == "EXT" & std_res$op == "=~", ]
 
-# Create path diagram to show weight and structure of the model 
-png(paste0(path, "/figures/", "EXT_path_diagram.png"), width = 2000, height = 2000, res = 300) # to save
-
-# barplot
-b_plot <- barplot(plot_data$est.std, # plot loadings
-                  names.arg = plot_data$rhs,  # set x labels
-                  col = "#5475E7",      
-                  border = "white",       
-                  main = "Composition of the Externalizing (EXT) Factor", # title
-                  ylab = "Standardized loading (beta)", # y label
-                  ylim = c(0, 1.1),       # leave room for error bars
-                  cex.names = 1.1,        # make font bit larger
-                  font.main = 2,
-                  mar = c(5, 6, 4, 2))  # change margins for readability
-
-
-# Add error bars as precision markers (95% CI)
-arrows(b_plot, plot_data$ci.lower, b_plot, plot_data$ci.upper, # using 'lower' and 'upper' columns from standardizedSolution
-       angle = 90, code = 3, length = 0.05, lwd = 1.5)
-
-# Add values on top of bars 
-text(x = b_plot, y = plot_data$est.std + 0.15,  # + 0.12 to avoid overlap error bars
-     labels = round(plot_data$est.std, 2), 
-     cex = 0.9, font = 2)
-
-dev.off()
-
-# Create another tree path diagram for whole factor composition 
-png(paste0(path, "/figures/", "EXT_path_diagram2.png"), width = 2500, height = 2000, res = 300) # to save
+# Create tree path diagram for whole factor composition 
+png(paste0(path, "/figures/", "EXT_path_diagram.png"), width = 2500, height = 2000, res = 300) # to save
 
 semPaths(
   fit_ext_final,
@@ -372,7 +348,7 @@ dev.off()
 # ============================================================
 
 # define variable with first order factor names
-first_order_factors = c("hyp", "att", "srg", "con")
+first_order_factors = c("HYP", "ATT", "SCT", "CON")
 
 # 1. Get variance explained by EXT to check if there's a shared externalizing dimension
 r2_vals <- inspect(fit_ext_final, "r2")
@@ -392,10 +368,10 @@ parameterEstimates(fit_ext_final, standardized = TRUE) %>%
 
 # Compare EXT to a composite of first-order factors
 fs_compare <- df_fs %>%
-  select(EXT, hyp, att, srg, con) %>%
+  select(EXT, HYP, ATT, SCT, CON) %>%
   mutate(across(everything(), as.numeric)) %>%
-  mutate(across(c(hyp, att, srg, con), scale, .names = "{.col}_z")) %>%
-  mutate(first_order_sum = hyp_z + att_z + srg_z + con_z )
+  mutate(across(c(HYP, ATT, SCT, CON), scale, .names = "{.col}_z")) %>%
+  mutate(first_order_sum = HYP_z + ATT_z + SCT_z + CON_z )
 
 # Overlap between EXT and composite
 cor(fs_compare$EXT, fs_compare$first_order_sum, use = "pairwise.complete.obs") # correlation between EXT and standardized sum
@@ -406,9 +382,7 @@ summary(lm(EXT ~ first_order_sum, data = fs_compare))$r.squared
   # supports that a general factor captures shared ranking, and some domains keep substantial unique variance
 
 
-# 3. PCA as supporting evidence
-# Create scree plot
-png(paste0(path, "/figures/", "EXT_total_variance_explained.png"), width = 2000, height = 2000, res = 300)
+# 3. PCA as supporting evidence and to extract PC1 for downstream analyses
 
 # Define factor scores for pca
 vars_pca <- df_fs[, first_order_factors]  
@@ -416,39 +390,48 @@ vars_pca <- df_fs[, first_order_factors]
 # Run diagnostic PCA on the complete rows
 pca_diag <- prcomp(na.omit(vars_pca), scale. = TRUE)
 
-# Calculate variance explained by first PC
-var_explained <- (pca_diag$sdev^2 / sum(pca_diag$sdev^2))[1] * 100
-var_explained
+# Create variable for eigenvalue
+eigenvalues <- pca_diag$sdev^2
 
+# Calculate variance explained by first PC in percent
+variance_explained <- eigenvalues / sum(eigenvalues) # variance proportional
+pc1_var <- variance_explained[1] * 100
+pc1_var
+cat("PC1 explains:", round(pc1_var, 2), "%\n")
 
-# Make scree Plot 
-plot(pca_diag$sdev^2, type = "b", pch = 19, col = "#5E1AF4",
-     main = "Scree Plot",
-     xlab = "Component Number",
-     ylab = "Variance Explained (Eigenvalue)",
-     ylim = c(0, max(pca_diag$sdev^2) + 0.5),
-     xaxt = "n")  # not draw default x acis
-
-axis(side = 1, at = 1:length(pca_diag$sdev)) # define x axis with length of components
-abline(h = 1, lty = 2, col = "#FF6230") # line at 1 kaiser criterion
-
-dev.off()
-
+# Eigenvalue pc1
+pc1_eigenvalue <- eigenvalues[1]
+pc1_eigenvalue
 
 # Variance explained by other PCs in percent
-eig <- pca_diag$sdev^2 # eigenvalue
-vars_explained <- eig / sum(eig) # variance proportional
-
-pc2_var <- vars_explained[2] * 100
-pc3_var <- vars_explained[3] * 100
-pc4_var <- vars_explained[4] * 100
-pc234_var <- sum(vars_explained[-1]) * 100 # sum of variance explained by all except first PC
+pc2_var <- variance_explained[2] * 100
+pc3_var <- variance_explained[3] * 100
+pc4_var <- variance_explained[4] * 100
+pc234_var <- sum(variance_explained[-1]) * 100 # sum of variance explained by all except first PC
 
 # Print for reporting
 cat("PC2 explains:", round(pc2_var, 2), "%\n")
 cat("PC3 explains:", round(pc3_var, 2), "%\n")
 cat("PC4 explains:", round(pc4_var, 2), "%\n")
 cat("Sum PC2-4:" , round(pc234_var, 2), "%\n") # PC1 explains waay more than sum of other PCs
+
+# Make scree Plot 
+# Create scree plot
+png(paste0(path, "/figures/", "PCA_first_order_factor_scores.png"), width = 2000, height = 2000, res = 300)
+
+plot(pca_diag$sdev^2, type = "b", pch = 19, col = "#5E1AF4",
+     cex = 1.5,       # bigger points
+     lwd = 1.5,       # thicker line
+     main = "Scree Plot",
+     xlab = "Principal Component Number",
+     ylab = "Variance Explained (Eigenvalue)",
+     ylim = c(0, max(pca_diag$sdev^2) + 0.5),
+     xaxt = "n")  # not draw default x axis
+
+axis(side = 1, at = 1:length(pca_diag$sdev)) # define x axis with length of components
+abline(h = 1, lty = 2, col = "#FF6230") # line at 1 kaiser criterion
+
+dev.off()
 
 # inspect PCs and first order factors
 round(pca_diag$rotation, 2)
