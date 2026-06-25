@@ -62,36 +62,10 @@ df_ext <- df_ext %>%
   mutate(across(everything(), ~ ifelse(. %in% missing_codes, NA, .)))
 
 # ============================================================
-# 3. DUPLICATE VARIABLES
+# 3. HARMONIZE DUPLICATE VARIABLES
 # ============================================================
 
-# Inspect and harmomonize duplicate variables
-# 1. Smok and smok_ever: Look at rows with available data
-df_smok <- df_ext %>%
-  filter(!is.na(smok) |!is.na(smok_ever)) %>%
-  select(pid, smok, smok_ever) # Looks like either smok_init or smok_init2 are available across rows
-
-# Check whether both smok and smok_ever are available in any row before merging
-df_ext %>%
-  filter(!is.na(smok) & !is.na(smok_ever)) %>%
-  select(pid, smok, smok_ever) # no, exclusive
-
-# Harmonize smok and smok_ever
-df_ext <- df_ext %>%
-  mutate(
-    # Recode smok_ever
-    smok_ever_recoded = case_when(
-      smok_ever == 1 ~ 2, # 1 (yes) -> 2 (smoker)
-      smok_ever == 2 ~ 6, # 2 (no) -> 6 (no)
-      TRUE ~ NA_real_
-    ),
-    # Merge prioritizing smok (more detailed), then recoded smok_ever
-    smok = coalesce(as.numeric(smok), smok_ever_recoded)
-  ) %>%
-  select(-smok_ever_recoded, -smok_ever) # drop the redundant variables
-
-
-# 2. Smoking initiation: look at rows with available data
+# 1. Smoking initiation: look at rows with available data
 df_smok_init <- df_ext %>%
   filter(!is.na(smok_init) |!is.na(smok_init2)) %>%
   select(pid, smok_init, smok_init2) 
@@ -120,7 +94,7 @@ df_ext <- df_ext %>%
   select(-smok_init2, -smok_init3) # drop other smok_init variables
 
 
-# 4. Smoking alone
+# 2. Smoking alone
 # Confirm whether both smok_solo and smok_solo2 are available in any row
 df_ext %>%
   filter(!is.na(smok_solo) & !is.na(smok_solo2)) %>%
@@ -132,19 +106,19 @@ df_ext <- df_ext %>%
   select(-smok_solo2)  # drop other smok_solo variable
 
 
-# 5. Alcohol initiation
+# 3. Alcohol initiation
 # Confirm whether both alc_init and alc_init2 are available in any row
 df_ext %>%
   filter(!is.na(alc_init) & !is.na(alc_init2)) %>%
   select(pid, alc_init, alc_init2) # no, exclusive
 
-# 6. Merge alc_init variables
+# Merge alc_init variables
 df_ext <- df_ext %>%
   mutate(alc_init = ifelse(!is.na(alc_init), alc_init, alc_init2)) %>%
   select(-alc_init2) # Drop alc_init2 
 
 
-# 7. Alcohol frequency excessive
+# 4. Alcohol frequency excessive
 # Confirm whether both alc_freq_exc and alc_freq_exc2 are available in any row
 df_ext %>%
   filter(!is.na(alc_freq_exc) & !is.na(alc_freq_exc2)) %>%
@@ -156,7 +130,7 @@ df_ext <- df_ext %>%
   select(-alc_freq_exc2) # Drop alc_freq_exc2
 
 
-# 8. devi_anger: look at rows with available data
+# 5. devi_anger: look at rows with available data
 df_devi_anger <- df_ext %>%
   filter(!is.na(devi_anger)  | !is.na(devi_anger2)) %>%
   select(pid, devi_anger, devi_anger2) 
@@ -173,7 +147,7 @@ df_ext <- df_ext %>%
   select(-devi_anger2)  # Drop devi_anger2 
 
 
-# 9. alc_n_beer_exc: look at rows with available data
+# 6. alc_n_beer_exc: look at rows with available data
 df_alc_n_beer_exc <- df_ext %>%
   filter(!is.na(alc_n_beer_exc) | !is.na(alc_n_beer_exc2)) %>%
   select(pid, alc_n_beer_exc, alc_n_beer_exc2) 
@@ -184,7 +158,7 @@ df_ext %>%
   select(pid, alc_n_beer_exc, alc_n_beer_exc2) # no, exclusive
 
 
-# 10. Merge alc_n_beer_exc  variables
+# Merge alc_n_beer_exc  variables
 df_ext <- df_ext %>%
   mutate(alc_n_beer_exc = ifelse(!is.na(alc_n_beer_exc), alc_n_beer_exc, alc_n_beer_exc2)) %>%
   select(-alc_n_beer_exc2) # Drop alc_n_beer_exc2
@@ -408,8 +382,8 @@ print(n = Inf, skew_summary_counts)
 
 # Remove outliers above Q3 + 3 * IQR for continuous skewed variables (robust to skewness because it doesn't assume normality, unlike SD-based methods; robust to zero inflation compared to log transformation + SD
 # Define only continuous skewed variables to clean (exclude likert scales, yes/no etc.)
-vars_skewed <- c("del_bully12", "del_shoplift12", "del_cyberb12", "del_fair_dg12", 
-                 "del_steal24", "del_illeg_dl12", "del_skip_freq12", "del_vand12",
+vars_skewed <- c("del_bully12", "del_shoplift12", "del_cyberb12", "del_fair_dg24", 
+                 "del_steal12", "del_illeg_dl12", "del_skip_freq12", "del_vand12",
                  "del_graff12", "del_threat_rob12", "del_away_ovnt12", "drugs_freq24", 
                  "alc_n_wine_exc", "drugs_freq12", "alc_n_hp_exc", "alc_n_beer_exc")
 
