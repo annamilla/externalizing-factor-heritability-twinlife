@@ -7,17 +7,17 @@
 
 model_final <- '
   # ADHD related indicators
-  hyp =~ adhd_restless + adhd_move
-  att =~ adhd_act + adhd_tasks + adhd_unfoc
+  HYP =~ adhd_restless + adhd_move
+  ATT =~ adhd_act + adhd_tasks + adhd_unfoc
   
   # Self-regulation
-  srg =~ srg0100 + srg0200 + srg0400 + srg0500 + srg0600
+  SCT =~ srg0100 + srg0200 + srg0400 + srg0500 + srg0600
   
   # Conduct problems: disruptive behavior and delinquency
-  con =~ agg + devi_anger + del_lie + del_steal
+  CON =~ agg + devi_anger + del_lie + del_steal
 
   # Higher-order factor without substance use
-  EXT =~ hyp + att + srg + con    
+  EXT =~ HYP + ATT + SCT + CON  
          
   # Residual covariances to account for method effects
   adhd_unfoc ~~ adhd_tasks
