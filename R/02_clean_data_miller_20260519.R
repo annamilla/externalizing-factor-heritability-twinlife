@@ -335,6 +335,24 @@ range(df_ext$age_yrs_pq) # correct
 # Check sample size
 n_distinct(df_ext$pid) # updated sample size: 7460 pids
 
+# Check birth year range for filtered age range
+df_birth_year <- df_ext %>%
+  select(pid, fid, age_yrs_pq, yea_pq) %>%
+  filter(
+    !is.na(age_yrs_pq )) %>%
+  mutate(
+    birth_year = yea_pq - age_yrs_pq    # compute birth year from pq year and age
+  )
+
+head(df_birth_year)
+
+min(df_birth_year$birth_year)
+max(df_birth_year$birth_year)
+
+# Sanity check age range, as full birth year range covered in filtered age range
+min(df_birth_year$age_yrs_pq)
+max(df_birth_year$age_yrs_pq) # correct, 11-26
+
 
 # ============================================================
 # 6. OUTLIER INSPECTION AND CLEANING
