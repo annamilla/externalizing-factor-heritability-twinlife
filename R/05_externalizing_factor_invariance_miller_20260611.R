@@ -20,7 +20,7 @@ path_model <- ("/Volumes/MPRG-Biosocial/Projects/04_data_analysis/012_SHIP_BASE_
 load(file.path(path, "04_twinlife_externalizing_model_data.rda"))
 
 # ============================================================
-# 2. INVARIANCE TESTING ACROSS AGE
+# 2. INVARIANCE TESTING ACROSS AGE GROUPS
 # ============================================================
 
 # Age in years as grouping variable
@@ -95,3 +95,69 @@ invariance_results <- rbind(
 print(invariance_results) # metrics within acceptable ranges for both configural and metric invariance
 
 
+# ============================================================
+# 2. INVARIANCE TESTING ACROSS GENDER
+# ============================================================
+
+# 1. Configural invariance
+fit_configural_sex <- cfa(
+  model = model_final,
+  data = df_model,
+  group = "sex",
+  estimator = "MLR",
+  missing = "FIML",
+  cluster = "fid",
+  std.lv = FALSE
+)
+
+summary(
+  fit_configural_sex,
+  fit.measures = TRUE,
+  standardized = TRUE
+)
+
+# 2. Metric invariance
+fit_metric_sex <- cfa(
+  model = model_final,
+  data = df_model,
+  group = "sex",
+  group.equal = "loadings",
+  estimator = "MLR",
+  missing = "FIML",
+  cluster = "fid",
+  std.lv = FALSE
+)
+
+summary(
+  fit_metric_sex,
+  fit.measures = TRUE,
+  standardized = TRUE
+)
+
+
+# Create table for invariance test results
+invariance_results_sex <- rbind(
+  Configural = fitMeasures(
+    fit_configural_sex,
+    invariance_metrics
+  ),
+  Metric = fitMeasures(
+    fit_metric_sex,
+    invariance_metrics
+  )
+)
+
+# Add difference row 
+invariance_results_sex <- rbind(
+  invariance_results_sex,
+  Delta =
+    invariance_results_sex["Metric", ] -
+    invariance_results_sex["Configural", ]
+)
+
+invariance_results_sex <- round(
+  invariance_results_sex,
+  3
+)
+
+print(invariance_results_sex)
