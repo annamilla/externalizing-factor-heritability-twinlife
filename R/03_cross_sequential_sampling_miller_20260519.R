@@ -114,10 +114,9 @@ age_counts
 
 
 # ============================================================
-# 3. VISUALIZATIONS OF DATA COLLECTION ACROSS TIME
+# 3. VISUALIZATIONS OF REPEATED DATA COLLECTION
 # ============================================================
 
-# 1. Visualize repeated data collection
 # Prepare timepoints to plot data collection across years (months not available in all rows)
 plot_repeated_years <- df_ext_merged %>%
   distinct(pid, yea_pq) %>%
@@ -129,16 +128,25 @@ plot_repeated_data <- ggplot(
   plot_repeated_years,
   aes(x = n_years, y = n_participants)
 ) +
-  geom_col(fill = "#7FBFA2") +
+  geom_col(
+    fill = "#0D75FF",  # custom color
+    width = 0.9) +     # make bars thinner
+  geom_text(                     # add labels on top of bars
+    aes(label = n_participants),
+    vjust = -0.4,
+    size = 5,
+    color = "#0D75FF", # same color for labels
+    fontface = "bold"   # make thicker
+  ) +
   scale_x_continuous(
     breaks = sort(unique(plot_repeated_years$n_years))
   ) +
   labs(
     title = "Repeated TwinLife data-collection across years",
-    x = "Number of years with available data per participant",
+    x = "Number of years with data",
     y = "Number of participants"
   ) +
-  theme_minimal(base_size = 16) # minimal theme with increased text size
+  theme_minimal(base_size = 16) # minimal theme with increased font size
 
 plot_repeated_data
 
@@ -149,50 +157,8 @@ sum(plot_repeated_years$n_participants) # correct
 ggsave(
   filename = file.path(path, "figures/Repeated_data_collection.png"),
   plot = plot_repeated_data,
-  width = 12,
-  height = 8,
-  dpi = 300
-)
-
-# 2. Visualize data collection by years
-# Count unique participants data was collected for per year
-plot_year_counts <- df_ext_merged %>%
-  distinct(pid, yea_pq) %>%
-  count(yea_pq, name = "n_participants")
-
-# Plot data collection by year
-plot_collection_years <- ggplot(
-  plot_year_counts,
-  aes(x = factor(yea_pq), y = n_participants)
-) +
-  geom_col(fill = "#3845AD") +
-  geom_text(
-    aes(label = n_participants),
-    vjust = -0.4,
-    size = 5
-  ) +
-  labs(
-    title = "TwinLife data collection across years",
-    x = "Year of data collection",
-    y = "Number of participants"
-  ) +
-  theme_minimal(base_size = 16) +
-  theme(
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor = element_blank()
-  ) +
-  expand_limits(
-    y = max(plot_year_counts$n_participants) * 1.08
-  )
-
-plot_collection_years
-
-# Save
-ggsave(
-  filename = file.path(path, "figures/Data_collection_years.png"),
-  plot = plot_collection_years,
-  width = 12,
-  height = 8,
+  width = 6,
+  height = 6,
   dpi = 300
 )
 
@@ -224,7 +190,7 @@ twins_no_common_age <- df_ext_merged %>%
   select(fid)
 
 twins_no_common_age
-# 11 twins, will need else clause to select different timepoints for twins with no common timepoint
+  # 11 twins, will need else clause to select different timepoints for twins with no common timepoint
   
 # Set median count as target for more even distribution
 target <- df_ext_merged %>%
@@ -308,6 +274,62 @@ twins_age_counts_merged <- twins_age_counts_new %>%
   relocate(n_twin_pairs_before, n_twin_pairs_after, .after = age_yrs_pq) # change order
 
 twins_age_counts_merged
+
+# Convert to long format to plot
+twins_age_counts_long <- twins_age_counts_merged %>%
+  pivot_longer(
+    cols = c(n_twin_pairs_before, n_twin_pairs_after),
+    names_to = "sample",
+    values_to = "n_twin_pairs"
+  )
+
+
+# Create bar plot with number of twins before and after resampling
+plot_resampling <- ggplot(
+  twins_age_counts_long,
+  aes(
+    x = factor(age_yrs_pq),
+    y = n_twin_pairs,
+    fill = sample
+  )
+) +
+  geom_col(width = 0.85, show.legend = FALSE) +
+  facet_wrap(
+    ~ sample,
+    ncol = 1,
+    labeller = as_labeller(c(
+      "n_twin_pairs_before" = "Before resampling",
+      "n_twin_pairs_after"  = "After resampling"
+    ))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "n_twin_pairs_before" = "#b319ab",
+      "n_twin_pairs_after"  = "#abf5ed"  
+    )
+  ) +
+  labs(
+    title = "Age distribution before and after resampling",
+    x = "Age",
+    y = "Number of twin pairs"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+plot_resampling
+
+# Save
+ggsave(
+  filename = file.path(path, "figures/Cross_sectional_resampling.png"),
+  plot = plot_resampling,
+  width = 6,
+  height = 6,
+  dpi = 300
+)
+
 
 # Check completeness in timepoint selection
 n_distinct(df_ext_filtered$pid)
